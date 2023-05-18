@@ -1,0 +1,44 @@
+\contentsline {section}{\numberline {1}Chapter Summary}{3}{section.1}%
+\contentsline {section}{\numberline {2}Process Identifiers}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}The PID}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Scheduler and Init Processes}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Additional Process Identifiers}{3}{subsection.2.3}%
+\contentsline {section}{\numberline {3}The \textbf {\emph {fork()}} Function}{4}{section.3}%
+\contentsline {subsection}{\numberline {3.1}About \textbf {\emph {fork()}}}{4}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}\textbf {\emph {fork()}} Example Code}{5}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}File Sharing}{6}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Exit Functions}{6}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Normal Terminations}{6}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Abnormal Terminations}{7}{subsection.4.2}%
+\contentsline {section}{\numberline {5}\textbf {\emph {wait()}} and \textbf {\emph {waitpid()}} Functions.}{7}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Function Prototypes}{7}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Wait Function Return Values}{7}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Useful Macros}{8}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}About \textbf {\emph {wait()}} and \textbf {\emph {waitpid()}}}{8}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Other Wait Functions}{9}{subsection.5.5}%
+\contentsline {section}{\numberline {6}Race Conditions}{9}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Basics}{9}{subsection.6.1}%
+\contentsline {section}{\numberline {7}\textbf {\emph {exec()}} Functions}{10}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Function Prototypes}{10}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}About Exec Functions}{10}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Inherited Properties Accross Execs}{11}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Other Characteristics Accross Execs}{11}{subsection.7.4}%
+\contentsline {section}{\numberline {8}Changing User IDS (UIDs) and Group IDs (GIDs)}{11}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Function Prototypes}{11}{subsection.8.1}%
+\contentsline {section}{\numberline {9}Interpreter Files: Nothing Here}{12}{section.9}%
+\contentsline {section}{\numberline {10}\textbf {\emph {system()}} Function}{12}{section.10}%
+\contentsline {subsection}{\numberline {10.1}Function Prototype}{12}{subsection.10.1}%
+\contentsline {subsection}{\numberline {10.2}About system()}{12}{subsection.10.2}%
+\contentsline {subsection}{\numberline {10.3}Basic Example}{12}{subsection.10.3}%
+\contentsline {subsection}{\numberline {10.4}Recreate A Basic system() function}{13}{subsection.10.4}%
+\contentsline {section}{\numberline {11}Set-User-ID Programs}{14}{section.11}%
+\contentsline {subsection}{\numberline {11.1}Running Set-User-ID Programs As Superuser}{14}{subsection.11.1}%
+\contentsline {subsection}{\numberline {11.2}Security Hole Example}{14}{subsection.11.2}%
+\contentsline {section}{\numberline {12}Process Accounting: Nothing Here}{14}{section.12}%
+\contentsline {section}{\numberline {13}User Identification}{15}{section.13}%
+\contentsline {subsection}{\numberline {13.1}\textbf {\emph {getlogin()}} Prototype}{15}{subsection.13.1}%
+\contentsline {section}{\numberline {14}Process Times}{15}{section.14}%
+\contentsline {subsection}{\numberline {14.1}Function Prototype}{15}{subsection.14.1}%
+\contentsline {subsection}{\numberline {14.2}tms Struct}{15}{subsection.14.2}%
+\contentsline {subsection}{\numberline {14.3}Explanation}{15}{subsection.14.3}%
+\contentsline {subsection}{\numberline {14.4}\textbf {\emph {times()}} Function And \textbf {\emph {tms}} Struct Example Code}{16}{subsection.14.4}%

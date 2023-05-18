@@ -1,0 +1,26 @@
+\contentsline {section}{\numberline {1}Before Reading}{2}{section.1}%
+\contentsline {section}{\numberline {2}High Level Overview}{2}{section.2}%
+\contentsline {section}{\numberline {3}Thread Concepts}{2}{section.3}%
+\contentsline {section}{\numberline {4}Basic Function Prototypes}{3}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Comparing Process Functions and Thread Functions}{4}{subsection.4.1}%
+\contentsline {section}{\numberline {5}Thread Identification}{4}{section.5}%
+\contentsline {section}{\numberline {6}Thread Creation}{4}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Code: Printing Thread IDs}{4}{subsection.6.1}%
+\contentsline {section}{\numberline {7}Thread Termination}{6}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Code: Getting Exit Codes From Threads}{6}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Code: Incorrectly Passing Values Between Threads}{8}{subsection.7.2}%
+\contentsline {subsubsection}{\numberline {7.2.1}Code Challenge 1: Returning Multiple Values From Thread}{10}{subsubsection.7.2.1}%
+\contentsline {section}{\numberline {8}Thread Synchronization}{11}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Function Prototypes}{11}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Mutexes}{11}{subsection.8.2}%
+\contentsline {subsubsection}{\numberline {8.2.1}Code: Basic Mutex Implementation}{11}{subsubsection.8.2.1}%
+\contentsline {subsubsection}{\numberline {8.2.2}Code Challenge 2: Dual Threaded Mutex}{14}{subsubsection.8.2.2}%
+\contentsline {subsection}{\numberline {8.3}Thread Deadlocking}{14}{subsection.8.3}%
+\contentsline {subsubsection}{\numberline {8.3.1}Code: Locking Multiple Mutexes}{14}{subsubsection.8.3.1}%
+\contentsline {subsection}{\numberline {8.4}Reader-Writer Locks}{20}{subsection.8.4}%
+\contentsline {subsubsection}{\numberline {8.4.1}Function Prototypes}{20}{subsubsection.8.4.1}%
+\contentsline {subsection}{\numberline {8.5}Condition Variables}{21}{subsection.8.5}%
+\contentsline {subsubsection}{\numberline {8.5.1}Function Prototypes}{21}{subsubsection.8.5.1}%
+\contentsline {section}{\numberline {9}Code Challenge Solutions}{22}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Challenge 1}{22}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Challenge 2}{24}{subsection.9.2}%

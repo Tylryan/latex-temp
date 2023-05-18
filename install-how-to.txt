@@ -1,0 +1,5 @@
+PACKAGES
+    Fedora
+        texlive-scheme-basic
+        texlive-scheme-medium
+        texlive-scheme-full

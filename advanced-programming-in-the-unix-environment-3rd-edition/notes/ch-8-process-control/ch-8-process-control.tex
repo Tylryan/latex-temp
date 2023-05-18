@@ -1,0 +1,870 @@
+\documentclass{article}
+\author{Tyler Ryan}
+\newcommand\bookname{Advanced Programming in the Unix Environment 3e}
+\newcommand\articletitle{ CH 8: Process Control Notes }
+\newcommand\datestarted{February 2, 2023}
+\newcommand\classname{APUE - CIT 5590}
+\newcommand\be[1]{\textbf{\emph{#1}}}
+\title{\articletitle\\\bookname\\\footnote{Fall 2023} CIT-5950}
+\date{\datestarted}
+
+\usepackage[margin=2cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{hyperref}
+% \usepackage{indentfirst}
+\setlength\parindent{0pt}   % \noindent by default
+
+\begin{document}
+\pagestyle{fancy}
+% \fancyhead[ROE]{\rightmark} % Set to current Chapter
+\fancyhead[LOE]{\articletitle} % Set to current Chapter
+\fancyfoot{}
+\fancyfoot[LEO]{\classname}
+\fancyfoot[REO]{\thepage}
+\fancyfoot[CEO]{\datestarted}
+\maketitle
+\tableofcontents
+\newpage
+
+
+\section{Chapter Summary}
+A thorough understanding of the UNIX System's process control is 
+essential for advanced programming. There are only a few functions
+to master: \be{fork()}, the \be{exec()} family, \be{\_exit}, \be{wait()},
+\be{waitpid()}.\newline
+These primatives are used in many applications. The \be{fork()}
+function also gave us an opportunity to look at \textbf{race conditions}.\newline
+
+Our examination of the \be{system()} function and \textbf{process accounting}
+gave us another look at all these process control functions. We also looked at another
+variation of the \be{exec()} functions: \textbf{interpreter files} and how they operate.\newline
+
+An understanding of the various User IDs and Group IDs that are provided--
+Real, Effective, and Saved--is critial to writing safe set-userID programs.
+
+
+\section{Process Identifiers}
+% \sectionmark{Process Identifiers}
+\subsection{The PID}
+\begin{itemize}
+    \item Process ID (PID).
+    \item Every process has one.
+    \item Always unique.
+    \item All PIDs are non-negative numbers.
+    \item Are reused after processes are terminated.
+        \begin{itemize}
+            \item However, using algorithms to delay this 
+                reuse prevents new PIDs from being mistaken 
+                for previous PIDs with the same number.
+        \end{itemize}
+    \item Because the PID is the only well known identifier 
+        of a process that is always unique, it is often used 
+        as a piece of other identifiers to gurantee uniqueness.
+
+\end{itemize}
+% Every process has a unique process ID (\textbf{PID}), which is a 
+% \emph{non-negative integer}. Because the PID is the only well-known
+% identifier of a process \emph{that is always unique}, it is
+% often used as a piece of other identifiers, to guarantee
+% uniqueness. \\
+
+% \textbf{PIDs are also reused} after they are terminated. However, 
+% using a algorithms to delay this reuse prevents new PIDs being
+% mistaken for previous PIDs with the same number. \\
+
+\subsection{Scheduler and Init Processes}
+
+\textbf{PID 0} is usually the \emph{scheduler process} and is 
+often known as the \emph{swapper}.
+
+\textbf{PID 1} is usually the \emph{init process} and is invoked
+by the kernel at the end of the bootstrap procedure.
+\begin{itemize}
+    \item Responsible for bringin up the UNIX System after 
+        the kernel has been bootstrapped.
+    \item Reads the system-dependent inizialization files 
+        --\emph{/etc/rc*} or \emph{/etc/inittab} and 
+        \emph{/etc/init.d/}-- and brings the system to a 
+        certain state, such as multiuser.
+    \item \textbf{Never Dies}.
+    \item It is a normal user process, not a system process 
+        within the kernel, like the swapper.
+    \item Does have Superuser Privileges.
+    \item Becomes the parent process of any orphaned child process.
+    \item New program file is \emph{sbin/init}.
+    \item Old program file was \emph{/etc/init}. \\
+\end{itemize}
+
+
+\subsection{Additional Process Identifiers}
+In addition to the PID, there are other identifiers for every 
+process (though not unique!). Below are the functions that 
+return those identifiers.\newline
+
+\newpage
+\begin{lstlisting}[
+    caption = {Additional Process Identifier Functions.},
+    frame = single
+    ]
+    #include <unistd.h>
+
+    pid_t getpid(void);     # Returns: PID of calling process.
+    pid_t getppid(void);    # Returns: Parent Process ID (PPID) of calling process.
+    uid_t getuid(void);     # Returns: Real User ID (UID) of calling process.
+    uid_t geteuid(void);    # Returns: Effective User ID (EUID) of calling process.
+    gid_t getgid(void);     # Returns: Real Group ID (GID) of calling process.
+    gid_t getegid(void);    # Returns: Effective Group ID (EGID) of calling process.
+\end{lstlisting}
+
+\section{The \be{fork()} Function}
+\begin{lstlisting}[
+    frame   = single,
+    label   = fork-func,
+    caption = {fork() Prototype}
+]
+    #include <unistd.h>
+
+    pid_t fork(void);       # Returns: 0 in child, PPID, or -1 if error.
+\end{lstlisting}
+
+\subsection{About \be{fork()}}
+\begin{itemize}
+    \item The new process created by fork() is called the \textbf{Child Process}.
+    \item fork() is called once, but returned twice.
+    \newline
+    \item A Parent can have more than one child, so to uniquely identify it's children, the children return their PIDs.
+        \begin{itemize} 
+            \item{There is no function that tells the parent the PIDs of it's children.}
+        \end{itemize}
+    \item fork() returns 0 to a child, because a child can only have one parent.
+        \begin{itemize} 
+            \item{Additionally, a child can always call \emph{getppid()} to obtain the PID of the parent.}
+        \end{itemize}
+
+    \item The child process \textbf{copies} all data from the parent process.
+        \begin{itemize} 
+            \item{This includes variables from your source code!}
+            \item{The child copies these variables, but does not alter the original values of the parent.} \newline
+        \end{itemize}
+\end{itemize}
+
+\textbf{The two uses for fork are:}
+\begin{enumerate}
+    \item \textbf{When a process wants to duplicate itself so that the parent 
+        and child can each execute different sections of code at the same time}
+        \emph{This is common for network servers}--the parent waits for
+        a serice request from the client. When the request arrives,
+        the parent calls \emph{fork()} and lets the child handle the request.
+        The parent goes back to waiting for the next service request to arrive.
+    \item \textbf{When a process wants to execute a different program.}
+        \emph{Common for shells.} In this case, the child does an \emph{exec()}
+        right after it returns from \emph{fork()}.
+\end{enumerate}
+
+\textbf{The two main reasons for \emph{fork()} to fail are }
+\begin{enumerate}
+    \item If too may processes are already in the system.
+        This usually means that something else is wrong.
+    \item If the total number of processes for the 
+        real user ID (UID) exceeds the system's limit.
+        \textbf{CHILD\_MAX} specifies this maximum number.
+\end{enumerate}
+
+        Below is an example of the fork function. As a result of the sleep()
+        function, the child should execute first. However, it \textbf{is normally never known
+        whether the Parent Process will execute before the Child Process or vice versa.} \newline
+
+\subsection{\be{fork()} Example Code}
+% For example in C
+\lstinputlisting[
+    language = C, 
+    frame    = single,
+    caption  = {Example of the fork() function.}
+]{./assets/main.c}
+
+\newpage
+    If you run: \textbf{gcc main.c \&\& ./a.out}, then the output will be:
+\begin{lstlisting}[
+    caption = {fork() function output to terminal.}, 
+    frame   = single
+]
+    a write to stdout
+    Before Fork
+    pid = 145800, glob = 7, var = 89
+    pid = 145794, glob = 6, var = 88 
+\end{lstlisting}
+    \hfill
+
+    If you run: \textbf{gcc main.c \&\& ./a.out \textgreater{} temp.txt \&\& cat temp.txt}
+    or run it in Vim, the output will be:
+
+\begin{lstlisting}[
+    caption = {Fork function output to file.},
+    frame = single
+]
+    a write to stdout
+    Before Fork
+    pid = 146403, glob = 7, var = 89
+    Before Fork
+    pid = 146402, glob = 6, var = 88
+\end{lstlisting}
+    \hfill
+
+
+\textbf{Don't think too hard about the second ''Before Fork''. 
+It has to do with the way C flushes it's print statements.
+Just be aware of it.}
+
+% \newpage
+\subsection{File Sharing}
+One characteristic of fork is that all file descriptors that are
+open in the parent are duplicated in the child.
+
+There are two normal cases for handling the file descriptors
+after a fork.
+\begin{enumerate}
+    \item \textbf{The parent waits for the child to complete.}
+        \begin{itemize}
+            \item Parent does not need to do anything with descriptors.
+            \item When the child terminates, any of the shared 
+                descriptors tat the child read from or wrote 
+                to will ahve their file offsets updated 
+                accordingly.
+        \end{itemize}
+    \item \textbf{Both the parent and the child go their own ways.}
+        \begin{itemize}
+            \item After the \emph{fork()}, the parent closes the file
+                descriptors that it doesn't need, and the child does
+                the same things.
+            \item Neither interferes with the other's open descriptors.
+                This scenario is often the case with network servers.
+        \end{itemize}
+\end{enumerate}
+
+\section{Exit Functions}
+\subsection{Normal Terminations}
+A process can terminate normally in the following 5 ways.
+\begin{itemize}
+    \item \be{return:} from a main function is equivalent to \be{exit}.
+    \item \be{exit():} Defined by ISO C and includes the calling of all 
+        exit handlers that have been registerd by the calling \be{atexit}.
+    \item \be{\_exit} and \be{\_Exit:} 
+        \begin{itemize}
+            \item \_Exit and \_exit are synonomous and do not flush standar I/O streams.
+            \item ISO C defines \_Exit to provide a way for a process to 
+                terminate without running exit handlers or signal handlers.
+            \item The \_exit function is called by \be{exit()} and handles the UNIX 
+                system-specific details.
+        \end{itemize}
+    \item \be{pthread\_exit():} calling this function from the last thread in the process.
+\end{itemize}
+\subsection{Abnormal Terminations}
+The 3 forms of abnormal terminations are:
+\begin{itemize}
+    \item \be{abort():} A special case of the ntext item, as it
+        generates the \textbf{SIGABRT} signal.
+    \item By receiving certain \textbf{signals}.
+    \item The last thread reponds to a cencellation request.
+        \begin{itemize}
+            \item By default, cancellation occurs in a deferred manner:
+                one thread requests that another be canceled, and somtime later,
+                the target thread terminates. \newline
+        \end{itemize}
+\end{itemize}
+
+Additional Info Regarding Exit Functions
+\begin{itemize}
+    \item Regardless of how a process terminates, the same code in the kernel is eventually executed.
+    \item In the case of an abnormal termination, the kernel generates the termination status
+        to indicate the reason for the abnormal termination, not the process itself.
+    \item Regardless of how a process was terminated, the parent of the process can obtain the termination status
+        from either the \be{wait()} or the \be{waitpid()} function.
+    \item If the parent terminates before the child, the \textbf{init process} becomes
+        the parent process of said child process.
+        \begin{itemize}
+            \item This way, we're guaranteed that every process has a parent.
+        \end{itemize}
+    \item A process that has terminated, but whose parent has not yet \emph{waited} for it is called a \textbf{Zombie Process}.
+        \begin{itemize}
+            \item In other words, if a child terminates before the parent, but the parent does not call a \be{wait()} function, 
+                then it is a Zombie. This is because the \be{wait()} function literally removes
+                zombie processes.
+            \item Ths \be{ps} command prints the state of a zombie process as \textbf{Z}.
+        \end{itemize}
+\end{itemize}
+
+\section{\be{wait()} and \be{waitpid()} Functions.}
+\subsection{Function Prototypes}
+\begin{lstlisting}[
+    frame   = single,
+    % caption = {Wait function prototypes},
+    label   = waitprototypes,
+    caption = {Wait Function Prototypes}
+    ]
+    #include <sys/wait.h>
+    // Also <wait.h> works on Fedora as of Feb. 2, 2023
+
+    pid_t wait(int *statloc);
+    pid_t waitpid(pid_t pid, int *statloc, int options);
+\end{lstlisting}
+
+\subsection{Wait Function Return Values}
+\begin{center}
+    \begin{table}[h!]
+        \begin{tabular}{|l|l|}
+            \hline
+            Return Value of waitpid() & Description \\
+            \hline
+            pid == -1             & Waits for any child process. In this respect,
+                                 \emph{waitpid()} is equivalent to \emph{wait()}. \\
+            \hline 
+            pid \textgreater{} 0  & Waits for thechild whose PID equals \emph{pid}. \\
+            \hline
+            pid == 0              & Waits for any child whose PID equals that of the calling process. \\
+            \hline
+            pid \textless         & Waits for any child whose PID equals the absolute value of \emph{pid}. \\
+            \hline
+        \end{tabular}
+        \caption{\emph{waitpid()} return value descriptions.}
+        \label{waitpidreturnvalues}
+    \end{table}
+\end{center}
+
+\textbf{NOTE:} The \be{waitpid()} function returns the PID of the child that terminated and stores the child's 
+termination status in the memory location pointed to by \be{statloc}.\newline
+
+With \be{wait()}, the only real error is if the calling process has no children.
+With \be{waitpid()}, it is also possible to get an error if the specified process or 
+process group does not exist or is not a child of the calling process.\newline
+
+\subsection{Useful Macros}
+\be{Remember:} You can run \be{man 2 wait} and find a list of these macros.
+\begin{center}
+\begin{tabular}{|l | l|}
+    \hline
+    \textbf{Macro} & \textbf{Description} \\ %[0.5ex] 
+    \hline
+    WIFEXITED(status)   & True if status was returned for a 
+                        child that terminated normally. \\
+                        & \\
+                        & \be{WEXITSTATUS(status)} can be called after WIFEXITED() \\
+                        & to fetch the actual return status. \\ 
+    \hline
+    WIFSIGNALED(status) & True if status was returned for a 
+                        child that terminated abnormally. \\
+                        & \\
+                        & \be{WTERMSIG(status)} can be called after
+                        WIFSIGNALED() to \\ 
+                        & fetch the signal number that caused the termination. \\
+                        & \\
+                        & \be{WCOREDUMP(status)} returns true if a core file of the \\
+                        & terminated process was generates. \\
+
+    \hline
+    WIFSTOPPED(status)  & True if status was returned for a 
+                        child that is currently stopped.\\
+                        &\\
+                        &\be{WSTOPSIG(status)} can be called to fetch the signal number \\ 
+                        & that caused the child to stop. \\
+    \hline
+    WIFCONTINUE(status) & True if status was returned for a child that has been continued \\
+                        & after a job control stop (XSI extention to POSIX.1; \\
+                        & \be{waitpid()} only). \\
+    \hline
+\end{tabular}
+\end{center}
+
+\subsection{About \be{wait()} and \be{waitpid()}}
+When a process terminates, either normally or abnormally, the kernel notifies
+the parent by sending the \be{SIGCHLD} signal (asynchronously) to the parent.\newline
+
+\textbf{Remember:} If a child is terminated \emph{before} the parent and the
+parent is not notified of it's exit status (\be{wait()} or \be{waitpid()} was 
+not called), then that child turns into a \textbf{Zombie}.\newline
+
+A process that calls \be{wait()} or \be{waitpid()} can:
+\begin{itemize}
+    \item Block, if all tis children are still running.
+    \item Return immediately with the termination status of a child, if a child has
+        terminated and is waiting for its termination status to be feched.
+    \item Return immediately with an error, if it doesn't have any child processes.
+\end{itemize}
+
+The differences between \be{wait()} and \be{waitpid()} are as follows:
+\begin{itemize}
+    \item The \be{wait()} function can block the caller until a child process 
+        terminates, whereas \be{waitpid()} has an option that prevents it from 
+        blocking.
+    \item The \be{waitpid()} function doesn't wait for the child that terminates first; 
+        \begin{itemize}
+            \item In other words, if there is more than one child, \be{wait()} 
+                returns on termination of \emph{any} of the children, whereas \be{waitpid()} can 
+            choose which child to wait on.
+        \end{itemize}
+        it has a number of options that control which process it waits for.
+\end{itemize}
+
+\clearpage
+3 additional features provided by \be{waitpid()}:
+\begin{itemize}
+    \item Allows us to wait for one particular process, whereas the \be{wait} function 
+        returns the status of the first terminated child.
+    \item Provides a \emph{nonblocking} version of \be{wait()}.
+    \item Provies support for \emph{job control} with the \be{WUNTRACED} 
+        and \be{WCONTINUED} options.
+\end{itemize}
+Additional Info About the Wait Functions
+\begin{itemize}
+    \item If the process is calling \be{wait()} because it received the \be{SIGCHLD}
+        signal, we expect \be{wait()} to return immediately. But if we call it at any 
+        random point in time, it can block.
+    \item If a child has already terminated and is a zombie, \be{wait()} returns
+        immediately with that child's status.
+    \item If you don't care about the children's termination status, the \be{*statloc} parameter can be \be{NULL}.
+\end{itemize}
+
+\subsection{Other Wait Functions}
+\begin{lstlisting}[
+    frame = single,
+    caption = {Other wait functions mentioned in the book.},
+    label = otherwaitfunctions
+    ]
+    #include <sys/wait.h>
+
+    // Only Solaris provides this I believe
+    int waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options);
+
+    #include <sys/types.h>
+    #include <sys/wait.h>
+    #include <sys/time.h>
+    #include <sys/resource.h>
+
+    // These are available in FreBSD, Linux, OSX, Solaris
+    pid_t wait3(int *statloc, int options, struct rusage *rusage);
+    pid_t wait4(pid_t pid, int *statloc, int options, struct rusage *rusage);
+
+\end{lstlisting}
+
+\section{Race Conditions}
+\subsection{Basics}
+\begin{itemize}
+    \item Occurs when multiple processes are trying to do something with shared data
+        and the final outcome depends on the order in which the processes run.
+    \item If a process wants to wait for a \emph{child} to terminate, use one of the \textbf{wait} functions.
+    \item If a process wants to wait for its \emph{parent} to terminate, a loop of the following form could
+        be used (AKA Polling)
+        \begin{lstlisting}[frame = single, caption = {Example of Polling}]
+    while (getppid() != 1)
+        sleep(1);
+    \end{lstlisting}
+\item The problem with \textbf{polling} is that it wastes CPU time.
+\item To avoid race conditoins and to avoid polling, some form of \textbf{signaling} is required
+    between multiple processes.
+        \begin{itemize}
+            \item Various forms of \textbf{interprocess communication (IPC)} can also be used.
+        \end{itemize}
+
+\end{itemize}
+
+\section{\be{exec()} Functions}
+\subsection{Function Prototypes}
+\begin{lstlisting}[
+    frame   = single,
+    caption = {List of exec functions},
+    label   = {execfunctions}
+    ]
+    #include <unistd.h>
+
+    // 'e' as in 'environment'
+    // 'v' as in 'vector'
+
+    /* 'p' for 'filename'. E.g. 'bash'
+     * It has a 'p' because it looks up a filename (bash)
+     * in your PATH. This way you don't have to specify
+     * the WHOLE path. E.g. '/usr/bin/bash'
+     */
+
+    // 'pathname' == 'whole path to file'. E.g. '/usr/bin/bash'
+    int execl(const char *pathname, const char *arg0, ..., (char *) NULL);
+
+    int execle(const char *pathname     , 
+                     const char *arg0   , 
+                     ...                , 
+                     (char *) NULL      , 
+                     char * const env[]);
+
+    int execv(const char *pathname, char * const argv[]);
+
+    int execve(const char *pathname     , 
+                     char * const argv[], 
+                     char * const envp[]);
+
+    int execlp(const char *filename, const char *arg0, ..., (char *) NULL);
+
+    int execvp(const char *filename, char * const argv[]);
+
+    int execl(const char *pathname, const char *arg0, ..., (char *) NULL);
+
+                                        All 6 return -1 on error, no return on success
+\end{lstlisting}
+\subsection{About Exec Functions}
+\begin{itemize}
+    \item When a process calls one of the \be{exec()} functions, that process
+        is completely replaced by the new program, and the new program
+        starts executing at its \textbf{main} function.
+    \item The PID does not change across an \be{exec()}, because a new process 
+        is not created;
+        \begin{itemize}
+            \item \be{exec()} just replaces the current process--its data, heap, 
+                and stack segments--with a brand new program from disk.
+        \end{itemize}
+
+\end{itemize}
+\clearpage
+\subsection{Inherited Properties Accross Execs}
+The PID does not change after an \be{exec()}, but the new program 
+inherits additional properties from the calling process.
+\begin{itemize}
+    \item PID and PPID
+    \item UID and GID
+    \item Supplementary GIDs
+    \item PGID
+    \item SID
+    \item Controlling Terminal
+    \item Time left until alarm clock
+    \item CWD
+    \item Root Directory
+    \item File mode creation mask
+    \item File locks
+    \item Process signal mask
+    \item Pending signals
+    \item Resource limits
+    \item Values for \be{tms\_utime}, \be{tms\_stime}, \be{tms\_cutime}, \be{tms\_cstime}
+\end{itemize}
+
+\subsection{Other Characteristics Accross Execs}
+\begin{itemize}
+    \item The default is to leave descriptors open accross the \be{exec()}
+        unless we specifically set the close-on-exec flag using \be{fcntl}.
+    \item POSIX.1 specifically equires that open directory streams (\be{opendir()})
+        be closed accros an \be{exec()}.
+    \item Real User ID (UID) an Real Group ID (GID) remain the same accros the 
+        \be{exec()}, but the Effective IDs (EID) can change, depending on the 
+        status of the Saved Set-User-ID.
+\end{itemize}
+
+\section{Changing User IDS (UIDs) and Group IDs (GIDs)}
+\subsection{Function Prototypes}
+\begin{lstlisting}[
+    frame   = single,
+    caption = {User/Group ID Function Prototypes},
+    label   = uidprototypes
+    ]
+    #include <unistd.h>
+
+    // UID == Real User ID
+    int setuid(uid_t uid);
+    int setgid(gid_t gid);
+
+    // EUID == Effective User ID
+    int seteuid(uid_t uid);
+    int setegid(gid_t gid);
+                                                All return: 0 if OK, -1 on error
+\end{lstlisting}
+In the UNIX System, privileges, such as being able to change the system's notion
+of the current date, and access control, such as being able to read or write a particular 
+file, are based on user and group IDs. \newline
+
+When our programs need additional privileges or need to gain access to resources that 
+they currently aren't allowed to access, they need to change their User or Group ID 
+to an ID that has the appropriate privileges 
+or access. \newline
+
+Similarly, when our programs need to lower their privileges or prevent acces to certain
+resources, they do so by changing either their User ID or Group ID to an ID without
+the privilege or ability access to the resource. \newline
+
+\section{Interpreter Files: Nothing Here}
+This is pretty easy, just google it real quick.
+\section{\be{system()} Function}
+\subsection{Function Prototype}
+\begin{lstlisting}[
+    frame   = single,
+    caption = {system() prototype},
+    label   = {systemprototype}
+    ]
+    #include <stdlib.h>
+
+    /* If either fork() fails or waitpid() returns an error other than
+     * EINTR, system() returns -1 with errno set to indicate the error.
+     *
+     * If exec() fails, implying that the shell can't be executed, the return 
+     * value is as if the shell had executed exit(127).
+     *
+     * Otherwise, all 3 functions--fork(), exec(), and waitpid()--succeeded, and
+     * the return value from system() is the termination status of the shell, in 
+     * the format specified for waitpid().
+     */
+
+    int system(const char * command);
+\end{lstlisting}
+Returns 
+\begin{itemize}
+    \item If either \be{fork()} fails or \be{waitpid()} returns an error other than 
+        \be{EINTR}, \be{system()} returns -1 with \be{errno} set to indicate the error.
+\end{itemize}
+\subsection{About system()}
+The \be{system()} function combines the\be{fork()}, \be{exec()}, and \be{waitpid()} functions
+into one.
+\subsection{Basic Example}
+\begin{lstlisting}[
+    frame   = single,
+    caption = {A basic use case for system()},
+    label   = {systemexample}
+    ]
+    #include <stdlib.h>
+
+    int main()
+    {
+        system("echo 'hello there' > hello.txt && cat hello.txt");
+    }
+
+                                                                Output:
+                                                                hello there
+\end{lstlisting}
+\subsection{Recreate A Basic system() function}
+\begin{lstlisting}[
+    frame = single,
+    caption = {Simple system() recreation},
+    label = {mysystemfunc}
+    ]
+    #include <sys/wait.h>
+    #include <errno.h>
+    #include <unistd.h>
+    #include <stdlib.h>
+
+    int system(const char * command)
+    {
+        pid_t pid;
+        int   status;
+
+        if (command == NULL)
+            return(EXIT_FAILURE);
+        
+        pid = fork();
+
+        if (pid < 0) 
+            status = -1;
+        // Child Process
+        else if (pid == 0)
+        {
+            execl("/bin/bash", "random string", "-c", command, (char *) NULL);
+            _exit(127);
+        }
+
+        /* pid > 0
+         *
+         * Waits for any child whose process group ID (PGID) 
+         * equals the calling process ID.
+         */
+        else 
+        {
+            while (waitpid(pid, &status, 0) < 0)
+            {
+                if (errno != EINTR)
+                {
+                    status -1;
+                    break;
+                }
+            }
+        }
+        return status;
+    }
+\end{lstlisting}
+
+Explanation
+\begin{itemize}
+    \item Example command: \be{system("ls /usr/bin $|$ grep \string^b $>$ out.txt")}
+    \item The shell's \be{-c} option allows us to pass in a command as if we had the terminal open.
+    \item The advantage in using \be{system()} instead of \be{fork()} and \be{exec()} directly,
+        is that \be{system()} \textbf{does not require error handling and all the required signal handling.}
+\end{itemize}
+
+
+\section{Set-User-ID Programs}
+\subsection{Running Set-User-ID Programs As Superuser}
+It is a security hold to call \be{system()} from a set-user-ID program and should never be done. \newline
+
+Below is an example of such a program. Imagine running it as a super user. How could this
+be dangerous?
+\subsection{Security Hole Example}
+\begin{lstlisting}[
+    frame   = single,
+    caption = {Dangerous program!},
+    label   = {dangerousprogram}
+    ]
+
+    #include <stdlib.h>
+    #include <stdio.h>
+
+    int main(int argc, char * argv[])
+    {
+        int status;
+
+        if (argc < 2)
+        {
+            printf("Error: command line argument required.");
+            exit(EXIT_FAILURE);
+        }
+
+        if ((status = system(argv[1])) < 0)
+        {
+            perror("ERROR");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("Status: %d\n", status);
+        exit(EXIT_SUCCESS);
+    }
+\end{lstlisting}
+
+Perhaps this will help. What if we were to run the following commands?
+\begin{lstlisting}[
+    frame = single,
+    ]
+    $ gcc main.c
+    $ su - root
+    # ./a.out "rm -rf /"
+    
+\end{lstlisting}
+
+\textbf{Running this command would remove everything on this person's computer!}\newline
+
+To be safe, if a program is running with special permissions--either set-user-ID or set-group-ID--and
+wants to spawn another process, a process should use \be{fork()} and \be{exec()} \textbf{directly}.
+This will ensure that permissions change back to normal after the \be{fork()}, before
+calling \be{exec()}. \newline
+
+\textbf{Never run \be{system()} from a set-user-ID or a set-group-ID program.}
+
+\section{Process Accounting: Nothing Here}
+Boring. Look in the book.
+
+\newpage
+\section{User Identification}
+\subsection{\be{getlogin()} Prototype}
+\begin{lstlisting}[
+    frame = single,
+    caption = {Get User Login Name},
+    belowskip = -0.8 \baselineskip
+    ]
+    
+    // Equivalent to Bash's "$ echo $USER" or "$ echo $LOGNAME"
+    #include <unistd.h>
+
+    char * getlogin(void);
+
+                                Returns: char * of login name if OK, NULL on error.
+\end{lstlisting}
+
+\section{Process Times}
+\subsection{Function Prototype}
+\begin{lstlisting}[
+    frame = single,
+    caption = {times() prototype},
+    ]
+    #include <sys/times.h>
+
+    clock_t times(struct tms * buf);
+                Returns: elapsed wall clock time in clock ticks if OK, -1 on Error
+\end{lstlisting}
+\subsection{tms Struct}
+\begin{lstlisting}[
+    frame = single,
+    caption = {tms (Times) Struct}
+    ]
+
+    /* Note: This struct does not contain wall clock time
+     * This is because its return value IS the wall clock time.
+     *
+     * Also, these times are reported in CLOCK TICKS specified
+     * by sysconf(_SC_CLK_TCK);
+     * 
+     * To get this time into seconds, you must do the following.
+     * long clock_ticks = sysconf(_SC_CLK_TCK);
+     * long seconds = tms_utime / (double) clock_ticks;
+     */
+
+    struct tms
+    {
+        clock_t tms_utime;  // user CPU time
+        clock_t tms_stime;  // system CPU time
+        clock_t tms_cutime; // user CPU time of children
+        clock_t tms_cstime; // system CPU time of children
+    }
+\end{lstlisting}
+\subsection{Explanation}
+3 Types of Process Times:
+\begin{itemize}
+    \item \textbf{Wall Clock Time}
+    \item \textbf{User CPU Time:} Time spent running your application's functions.
+    \item \textbf{System CPU Time:} Time spent running OS (Kernel) functions.
+\end{itemize}
+\subsection{\be{times()} Function And \be{tms} Struct Example Code}
+\begin{lstlisting}[
+    frame = single,
+    caption = {Timing Program Execution}
+    ]
+    #include <unistd.h>
+    #include <stdlib.h>
+    #include <stdio.h>
+    #include <sys/times.h>
+    #include <time.h>
+
+    /* A program that takes in a list of commands and 
+     * prints how long they took in various ways.
+     */
+
+    static void 
+    track_time(clock_t real_time, struct tms * tms_start, struct tms *tms_end);
+
+    int 
+    main(int argc, char * argv[])
+    {
+        struct      tms tms_start, tms_end;
+        clock_t     start, end;
+        clock_t     real_time;
+        int         status;
+        char * cmds[] = {"sleep 5", "date"};
+
+        for (int i = 0; i < 2; i++) 
+        {
+            start     = times(&tms_start);
+            system(cmds[i]);
+            end       = times(&tms_end);
+            real_time = end - start;
+            track_time(real_time, &tms_start, &tms_end);
+        }
+
+        exit(EXIT_SUCCESS);
+    }
+
+    static void 
+    track_time(clock_t real_time, struct tms * tms_start, struct tms *tms_end)
+    {
+        static long clktck = 0;
+        clktck = sysconf(_SC_CLK_TCK);
+
+        printf(" real: %.2f seconds\n",  real_time / (double) clktck);
+        printf(" user: %.2f seconds\n",
+                tms_end->tms_utime - tms_start->tms_utime / (double) clktck);
+        printf(" sys:  %.2f seconds\n",
+                tms_end->tms_stime - tms_start->tms_stime / (double) clktck);
+        printf(" child user: %.2f seconds\n",
+                tms_end->tms_cutime - tms_start->tms_cutime / (double) clktck);
+        printf(" child sys:  %.2f seconds\n",
+                tms_end->tms_cstime  - tms_start->tms_cstime / (double) clktck);
+    }
+\end{lstlisting}
+\end{document}

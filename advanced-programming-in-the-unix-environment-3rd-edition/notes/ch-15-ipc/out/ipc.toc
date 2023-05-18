@@ -1,0 +1,5 @@
+\contentsline {section}{\numberline {1}Chapter Overview}{2}{section.1}%
+\contentsline {section}{\numberline {2}Pipes}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Manual Pipes}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}popen() and pclose()}{2}{subsection.2.2}%
+\contentsline {section}{\numberline {3}idk}{2}{section.3}%
